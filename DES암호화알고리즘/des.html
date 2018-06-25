@@ -1,0 +1,1072 @@
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <title>정보보안</title>
+</head>
+<body>
+  <h1>&nbsp;S-DES 시뮬레이션</h1>
+  <h3> &nbsp;&nbsp;정보보안 과제</h3>
+  <strong>&nbsp; 12120084 김세준</strong>
+  <hr>
+  <label for="input_cip_key"><strong>암호화 키를 입력하세요( * 0~1023 의 숫자만 입력가능)</strong> <span id="error1" style="color:red"></span><br>
+     &nbsp;입력 : <input id = "input_cip_key" type="text" name="" value=""><span id="error2" style="color:red"></span><br></label>
+
+  <label for="input_st"><strong>평문을 입력하세요(한글x)</strong><br>
+     &nbsp;입력 : <input id = "input_st" type="text" name="" value=""><span id="error3" style="color:red"></span><br><hr></label>
+     <p></p>
+  <!-- window.alert(key_10bit); 자바스크립트에서 경고창 띄우는거 -->
+
+  <h2>-결과창-</h2>
+  입력한 암호화 키 : <my id="user_key_value" style="font-size:20px"></my><br>   <!-- 입력한 암호화 키 -->
+  입력한 평문.&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;: <my id="user_input_st" style="font-size:20px" ></my><br>        <!-- 입력한 평문 -->
+  암호문. &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;: <my id="cip"style="font-size:20px"></my><br>       <!-- 암호화된 문장 -->
+
+  <script type="text/javascript">
+
+  var regNumber = /^[0-9]*$/; //유효성검사 = 숫자만입력하기위한
+  var RegExpHG = (/[ㄱ-ㅎ|ㅏ-ㅣ|가-힣]/); //한글금지
+  var key_10jin // 키 10비트 복호화를 위해 전역으로 선언
+  var cipStr;   //암호문!      복호화를 위해 전역으로 선언
+
+  //8비트 맞추는 메소드
+  function prependZero(num, len) {
+        while(num.toString().length < len) {
+            num = "0" + num;
+        }
+        return num;
+  }
+
+  //유효성 검사
+  function check(){
+    if(document.getElementById("input_cip_key").value == "" || document.getElementById("input_st").value == "" ){
+      document.getElementById("error1").innerHTML = "* 빈칸이 있습니다. 모두 채워주세요";
+    }else if(!regNumber.test(document.getElementById("input_cip_key").value)){
+      document.getElementById("error2").innerHTML = " * 암호화키는 숫자만 입력가능합니다.";
+      document.getElementById("error1").innerHTML = "";
+      // alert("암호화키는 숫자만 입력가능합니다.");
+    }else if( document.getElementById("input_cip_key").value > 1023 || document.getElementById("input_cip_key").value < 0){
+      document.getElementById("error2").innerHTML = " * 암호화키는 0 ~ 1023 의 숫자만 입력가능합니다.";
+      document.getElementById("error1").innerHTML = "";
+      // alert("암호화키는 0 ~ 1023 의 숫자만 입력가능합니다.");
+    }else if(RegExpHG.test(document.getElementById("input_st").value)){
+      document.getElementById("error3").innerHTML = " * 평문은 한글을 입력하지 마세요";
+      document.getElementById("error1").innerHTML = "";
+      // alert("평문은 한글을 입력하지 마세요");
+    }else{
+      document.getElementById("error1").innerHTML = "";
+      document.getElementById("error2").innerHTML = "";
+      document.getElementById("error3").innerHTML = "";
+      encode();
+    }
+  }
+
+function encode(){
+
+  document.getElementById("cip").innerHTML = ""; //암호문 누적방지위해 넣음
+  document.getElementById("input_cip").innerHTML = "";
+  document.getElementById("result_st").innerHTML = "";
+
+  // key_10jin = prompt("암호화 키 설정( 숫자 0 ~ 1023 를 입력 )")
+  key_10jin = document.getElementById('input_cip_key').value;
+  var p10_box = [3,5,2,7,4,10,1,9,8,6];
+  var p8_box  = [6,3,7,4,8,5,10,9];
+  var key_10bit = new Array(); //= [1,0,1,1,1,0,1,1,0,1];
+  var p10_gokey; //10비트 무작위로바꾼배열
+  var LS_1_shift; //10비트 섞은거 레프트시프트한거
+  var key1;   //10비트 8비트로 줄인 키1 완성
+  var key2;  //레프트시프트 2번한 키2 완성
+
+   var key_10jin_2 = parseInt(key_10jin);
+   key_10jin_2 = key_10jin_2.toString(2);
+   key_10bit = prependZero(key_10jin_2,10);
+
+   document.getElementById("user_key_value").innerHTML = key_10jin + " , <span style='font-size:16'>2진수 : </span>" + key_10bit;
+
+//함수 모음------------------------
+//키10개 바꾸는메소드
+ function p10(key10){
+    var p10_gokey = new Array();
+    p10_gokey[0] = key10[2];
+    p10_gokey[1] = key10[4];
+    p10_gokey[2] = key10[1];
+    p10_gokey[3] = key10[6];
+    p10_gokey[4] = key10[3];
+    p10_gokey[5] = key10[9];
+    p10_gokey[6] = key10[0];
+    p10_gokey[7] = key10[8];
+    p10_gokey[8] = key10[7];
+    p10_gokey[9] = key10[5];
+    return p10_gokey;
+ }
+ //레프트쉬프트
+ function LS_1(p10_gokey){
+   var LS_1_shift = new Array();
+   LS_1_shift[0] = p10_gokey[1];
+   LS_1_shift[1] = p10_gokey[2];
+   LS_1_shift[2] = p10_gokey[3];
+   LS_1_shift[3] = p10_gokey[4];
+   LS_1_shift[4] = p10_gokey[0];
+
+   LS_1_shift[5] = p10_gokey[6];
+   LS_1_shift[6] = p10_gokey[7];
+   LS_1_shift[7] = p10_gokey[8];
+   LS_1_shift[8] = p10_gokey[9];
+   LS_1_shift[9] = p10_gokey[5];
+   return LS_1_shift;
+ }
+ //p8
+ function p8(LS_1_shift){
+   var p8_gokey = new Array();
+
+    p8_gokey[0]= LS_1_shift[5];
+    p8_gokey[1]= LS_1_shift[2];
+    p8_gokey[2]= LS_1_shift[6];
+    p8_gokey[3]= LS_1_shift[3];
+    p8_gokey[4]= LS_1_shift[7];
+    p8_gokey[5]= LS_1_shift[4];
+    p8_gokey[6]= LS_1_shift[9];
+    p8_gokey[7]= LS_1_shift[8];
+     return p8_gokey;
+ }
+
+//--------------------------------
+
+ p10_gokey = p10(key_10bit);
+ console.log(p10_gokey);
+
+ LS_1_shift = LS_1(p10_gokey);
+ console.log(LS_1_shift);
+
+ key1 = p8(LS_1_shift); //키1완성
+ console.log(key1);
+
+ var LS_1_a = LS_1(LS_1_shift); //1번
+ var LS_2 = LS_1(LS_1_a); //레프트시프트2번
+ console.log(LS_2);
+
+ key2 = p8(LS_2);  //키2 완성
+ console.log(key2);
+//키만들기 끝!
+
+//-------------------------------------------===============암호화?
+
+// var st = prompt("영문자입력해"); //평문받는 변수
+ var st = document.getElementById('input_st').value;
+ document.getElementById("user_input_st").innerHTML = st;
+// document.writeln("입력문자 : " + st);
+// document.writeln("</br>암호화된문장 : ");
+st = st.split(""); //받은걸 각요소를 배열에 담는다
+console.log(st);
+console.log(st.length);
+console.log(st[0]);
+
+
+for(var i1   = 0; i1<st.length; i1++){
+
+      var  st_a  =  st[i1];
+
+var Ask10 = st_a.charCodeAt(); //받은걸 아스키코드 10진수로변환한거
+var Ask2 = Ask10.toString(2); //아스키코드 10진수를 2진수로 변환
+var Ask2to8 = prependZero(Ask2,8); //10진수를 2진수로변환한것을 8비트로 늘린것
+var Ask2to8 = Ask2to8.split(""); //8비트2진수를 각각 배열에 문자열 요소로 담음
+var readyStand = new Array();
+//배열에 문자를 숫자로 바꾸는 메소드
+for(var i = 0 ; i < 8; i++){
+  readyStand[i] =parseInt(Ask2to8[i]);
+}
+console.log("입력받은 문자를 8비트로 변환한것!준비완료 ↓")
+console.log(readyStand);
+
+var Stand = readyStand; //평문 = 8비트라 치고
+var Sbox1 = [[1,0,3,2],
+             [3,2,1,0],
+             [0,2,1,3],
+             [3,1,3,2]]
+
+var Sbox2 = [[0,1,2,3],
+             [2,0,1,3],
+             [3,0,1,0],
+             [2,1,0,3]]
+
+var L = new Array();
+var R = new Array();
+var EP; //EP실행해서 8비트 확장한것
+var xor; //key1 과 xor 시킨것
+var xor2; //key2와 xor 시킨것
+var SGbit; //s박스를 통하여 4비트를 생성한것!
+var P4GO; //P4박스를 실행한비트
+var L_xor; //P4GO와 l을 xor한 결과
+var PP; //위에랑 R이랑 이어붙인거 스위치전!
+var SWbit//스위치 시킨결과8비트
+
+
+//함수모음
+
+//ip박스
+ function IP(Stand){
+   var ip_go = new Array();
+   ip_go[0] = Stand[1];
+   ip_go[1] = Stand[5];
+   ip_go[2] = Stand[2];
+   ip_go[3] = Stand[0];
+
+   ip_go[4] = Stand[3];
+   ip_go[5] = Stand[7];
+   ip_go[6] = Stand[4];
+   ip_go[7] = Stand[6];
+   //L,R 치환한평문 4비트씩나누는거
+  for(var i = 0 ; i< ip_go.length/2 ; i++){
+    L[i] = ip_go[i];
+  }
+  for(var i = 0 ; i< ip_go.length/2 ; i++){
+    R[i] = ip_go[i+4];
+  }
+}
+// E/P박스
+function E_P(R){
+  var EPR = new Array();
+  EPR[0] = R[3];
+  EPR[1] = R[0];
+  EPR[2] = R[1];
+  EPR[3] = R[2];
+
+  EPR[4] = R[1];
+  EPR[5] = R[2];
+  EPR[6] = R[3];
+  EPR[7] = R[0];
+   return EPR;
+}
+//KEY1를 xor 연산 메소드
+  function XOR(){
+    var xor = new Array();
+    for(var i =0; i<8; i++){
+      if(EP[i] == key1[i]){
+        xor[i] = 0;
+      }else {
+        xor[i] = 1;
+      }
+    }
+    return xor;
+  }
+  //S박스처리위해 필요한 메소드들
+    function L_rowgo(xor){     //xor연산한 결과값을 입력하는데 다시한번 좌우4비트씩나눈다
+              if((xor[0] == 0) && (xor[3] == 0)){   //4비트씩나눴을떄 좌쪽 첫번쩨 네번쩨 비트값 행번호
+                return 0;                           //두번째세번쨰 비트값이 열번호이다. 그걸위한 메소드임
+              }else if((xor[0] == 0) && (xor[3] == 1)){
+                return 1;
+              }else if((xor[0] == 1) && (xor[3] == 0)){
+                return 2;
+              }else if((xor[0] == 1) && (xor[3] == 1)){
+                return 3;
+              }
+            }
+    function L_colgo(xor){
+              if((xor[1] == 0) && (xor[2] == 0)){
+                return 0;
+              }else if((xor[1] == 0) && (xor[2] == 1)){
+                return 1;
+              }else if((xor[1] == 1) && (xor[2] == 0)){
+                return 2;
+              }else if((xor[1] == 1) && (xor[2] == 1)){
+                return 3;
+              }
+            }
+
+    function R_rowgo(xor){
+              if((xor[4] == 0) && (xor[7] == 0)){
+                return 0;
+              }else if((xor[4] == 0) && (xor[7] == 1)){
+                return 1;
+              }else if((xor[4] == 1) && (xor[7] == 0)){
+                return 2;
+              }else if((xor[4] == 1) && (xor[7] == 1)){
+                return 3;
+              }
+            }
+    function R_colgo(xor){
+              if((xor[5] == 0) && (xor[6] == 0)){
+                return 0;
+              }else if((xor[5] == 0) && (xor[6] == 1)){
+                return 1;
+              }else if((xor[5] == 1) && (xor[6] == 0)){
+                return 2;
+              }else if((xor[5] == 1) && (xor[6] == 1)){
+                return 3;
+              }
+            }
+    //s박스에서 찾아낸 결과값을 2진수비트로변환한것을 저장하기 위한 작업 메소드
+    function remake2(SGbit){
+      if(Sbox1[L_row][L_col] == 0){
+          SGbit[0] = 0;
+          SGbit[1] = 0;
+      }else if(Sbox1[L_row][L_col] == 1){
+          SGbit[0] = 0;
+          SGbit[1] = 1;
+      }else if(Sbox1[L_row][L_col] == 2){
+          SGbit[0] = 1;
+          SGbit[1] = 0;
+      }else if(Sbox1[L_row][L_col] == 3){
+          SGbit[0] = 1;
+          SGbit[1] = 1;
+      }
+
+      if(Sbox2[R_row][R_col] == 0){
+          SGbit[2] = 0;
+          SGbit[3] = 0;
+      }else if(Sbox2[R_row][R_col] == 1){
+          SGbit[2] = 0;
+          SGbit[3] = 1;
+      }else if(Sbox2[R_row][R_col] == 2){
+          SGbit[2] = 1;
+          SGbit[3] = 0;
+      }else if(Sbox2[R_row][R_col] == 3){
+          SGbit[2] = 1;
+          SGbit[3] = 1;
+      }
+    }
+  //p4박스
+   function P4(SGbit){
+     var P4GO = new Array();
+     P4GO[0] = SGbit[1];
+     P4GO[1] = SGbit[3];
+     P4GO[2] = SGbit[2];
+     P4GO[3] = SGbit[0];
+      return P4GO;
+    }
+  //P4결과와 L과 xor 연산 메소드
+    function L_XOR(){
+      var L_xor = new Array();
+      for(var i =0; i<4; i++){
+        if(P4GO[i] == L[i]){
+          L_xor[i] = 0;
+        }else {
+          L_xor[i] = 1;
+        }
+      }
+      return L_xor;
+    }
+  //스위치 박스!
+    function SW(PP){
+      var SWbit = new Array();
+
+      SWbit[0] = PP[4];
+      SWbit[1] = PP[5];
+      SWbit[2] = PP[6];
+      SWbit[3] = PP[7];
+
+      SWbit[4] = PP[0];
+      SWbit[5] = PP[1];
+      SWbit[6] = PP[2];
+      SWbit[7] = PP[3];
+
+      return SWbit;
+    }
+
+//----------------------------------------------------------------------------------
+
+ IP(Stand);
+
+ console.log(L);
+ console.log(R);
+ //L,R 만들어냄 뭐야
+
+  EP = E_P(R);
+  console.log(EP);
+
+  xor = XOR();
+  console.log(xor);
+
+  var L_row = L_rowgo(xor); //행맞추고
+  var L_col = L_colgo(xor); //열마추고
+  console.log(L_row);
+  console.log(L_col);
+
+  var R_row = R_rowgo(xor); //행맞추고
+  var R_col = R_colgo(xor); //열마추고
+  console.log(R_row);
+  console.log(R_col);
+
+  console.log(Sbox1[L_row][L_col]); //결과값
+  console.log(Sbox2[R_row][R_col]); //결과값
+
+  SGbit = new Array();
+
+  remake2(SGbit); //2진수변환!
+
+  console.log(SGbit); //s박스를 통하여 4비트를 생성한것!
+
+  P4GO = P4(SGbit);
+  console.log(P4GO); //P4박스까지실행함!
+
+
+  L_xor = L_XOR();
+  console.log(L_xor); //l과 p4박스실행한거 xor한거
+
+  PP = new Array(); //R이어붙인거 스위치넣기전!
+
+   for(var i = 0; i < L_xor.length; i++){
+     PP[i] = L_xor[i];
+   }
+   for(var i = 4; i < R.length + 4 ; i++){
+     PP[i] = R[i-4];
+   }
+
+   console.log(PP);
+   //R이어붙임! 여기까지 스위치전!
+
+  SWbit = SW(PP);
+  console.log(SWbit); //스위치시킨결과
+
+//============================================================
+//2차전
+
+ var r_L = new Array();
+ var r_R = new Array();
+ var SGbit2;
+ var cip; //암호문!!!
+
+ for(var i = 0; i<4; i++){
+   r_L[i] = SWbit[i];
+ }
+ for(var i = 4; i<8; i++){
+   r_R[i-4] = SWbit[i];
+ }                          //다시 L,R 로나누는작업
+ console.log(r_L);
+ console.log(r_R);
+
+ var EP2 = E_P(r_R);
+ console.log(EP2);           //ep작업
+
+ //KEY2를 xor 연산 메소드
+   function XOR2(){
+     var xor = new Array();
+     for(var i =0; i<8; i++){
+       if(EP2[i] == key2[i]){
+         xor[i] = 0;
+       }else {
+         xor[i] = 1;
+       }
+     }
+     return xor;
+   }
+
+   var xor2 = XOR2();
+   console.log(xor2); //key2랑 xor시키것
+
+   var L_row = L_rowgo(xor2); //행맞추고
+   var L_col = L_colgo(xor2); //열마추고
+   console.log(L_row);
+   console.log(L_col);
+
+   var R_row = R_rowgo(xor2); //행맞추고
+   var R_col = R_colgo(xor2); //열마추고
+   console.log(R_row);
+   console.log(R_col);
+
+   console.log(Sbox1[L_row][L_col]); //결과값
+   console.log(Sbox2[R_row][R_col]); //결과값
+
+   SGbit2 = new Array();
+
+   remake2(SGbit2); //2진수변환!
+
+   console.log(SGbit2);  //s박스를 통하여 4비트를 생성한것!
+
+   var P4GO2 = P4(SGbit2);
+   console.log(P4GO2);   //P4박스까지실행함!
+
+   //P4결과와 L과 xor 연산 메소드
+     function r_L_XOR(){
+       var L_xor = new Array();
+       for(var i =0; i<4; i++){
+         if(P4GO2[i] == r_L[i]){
+           L_xor[i] = 0;
+         }else {
+           L_xor[i] = 1;
+         }
+       }
+       return L_xor;
+     }
+
+   var L_xor2 = r_L_XOR();
+   console.log(L_xor2);   //l과 p4박스실행한거 xor한거
+
+   var PP2 = new Array();
+
+   for(var i = 0; i < L_xor.length; i++){
+     PP2[i] = L_xor2[i];
+   }
+   for(var i = 4; i < R.length + 4 ; i++){
+     PP2[i] = r_R[i-4];
+   }
+  console.log(PP2);
+
+//마지막으로 ip-1박스에 넣음!
+  function ip_1(PP){
+    var ip_1 = new Array();
+    ip_1[0] = PP[3];
+    ip_1[1] = PP[0];
+    ip_1[2] = PP[2];
+    ip_1[3] = PP[4];
+    ip_1[4] = PP[6];
+    ip_1[5] = PP[1];
+    ip_1[6] = PP[7];
+    ip_1[7] = PP[5];
+
+    return ip_1;
+  }
+
+  cip = ip_1(PP2);
+  console.log("암호문은 ↓");
+  console.log(cip);
+  var twocip = cip.join('');
+  console.log(twocip);
+  var twocipint = parseInt(twocip, 2); //10진수로 반환
+  console.log(twocipint);
+  cipStr =  String.fromCharCode(twocipint); //10진수로 변환 된것을 문자로변환!!
+  console.log(cipStr);
+   document.getElementById("cip").innerHTML = document.getElementById("cip").innerHTML + cipStr;
+  //  document.write(cipStr);
+  };
+  var frmTag = '<input type="button" name="복호화 버튼" value="복호화 버튼" onclick="decode()">';
+  document.getElementById("incip").value = document.getElementById("cip").innerHTML;
+  document.getElementById("decotag").innerHTML = frmTag;
+
+  // function process_cip(){
+    document.getElementById("key_process").innerHTML = "사용자가 입력한 암호화키 =  <span style='font-size:30'><mark style='background-color: navajowhite '>" + key_10jin + "</mark></span>" +
+    "<br> 1단계) 암호화키를 2진수 10비트로 변환 :  <mark style='background-color: navajowhite '>" + key_10bit + "</mark>" +
+    "<br> 2단계) P10(key)의 결과 :  <mark style='background-color: navajowhite '>" + p10_gokey + "</mark>" +
+    "<br> 3단계) LS-1 결과 : <mark style='background-color: navajowhite '>" + LS_1_shift + "</mark>" +
+    "<br> 4단계) P8(2단계)) 결과 : <mark style='background-color: navajowhite '>" + key1 + "</mark>&nbsp;&nbsp;&nbsp;( <span style='color:red'>KEY1 = " + key1 + "</span> )" +
+    "<br> 5단계) LS-2 결과 : <mark style='background-color: navajowhite '>" + LS_2 + "</mark>" +
+    "<br> 6단계) P8(5단계)) 결과 : <mark style='background-color: navajowhite '>" + key2 + "</mark>&nbsp;&nbsp;&nbsp;( <span style='color:red'>KEY2 = " + key2 + "</span> )" ;
+
+
+
+    document.getElementById("process").innerHTML = "입력한 평문 마지막 글자 : <span style='font-size:30'><mark style='background-color: skyblue '>" + st[st.length-1] + "</mark></span>" +
+     "<br> 1단계) 아스키코드 8비트로 변환 : <mark style='background-color: skyblue '>" + readyStand + "</mark>" +
+     "<br> 2단계) IP에 넣은 결과(4비트씩 나눔): L=><mark style='background-color: skyblue '>" + L + "</mark>  R=><mark style='background-color: skyblue '>"+ R + "</mark>" +
+     "<br> 3단계) R을 E/P 에 입력하여 8비트로 확장 : <mark style='background-color: skyblue '>" + EP + "</mark>" +
+     "<br> 4단계) 3단계의 결과를 key1과 XOR 연산 : <mark style='background-color: skyblue '>" + xor + "</mark>" +
+     "<br> 5단계) 4단계의 결과를 S-box에 입력하여 4비트의 결과를 생성 : <mark style='background-color: skyblue '>" + SGbit + "</mark>" +
+     "<br> 6단계) 5단계의 결과를 P-box(p4)에 입력하여 치환 : <mark style='background-color: skyblue '>" + P4GO + "</mark>" +
+     "<br> 7단계) 6단계의 결과를 L과 XOR 연산 : <mark style='background-color: skyblue '>" + L_xor + "</mark>" +
+     "<br> 8단계) 7단계의 결과와 R을 이어붙인다. : <mark style='background-color: skyblue '>" + PP + "</mark>" +
+     "<br> 9단계) 8단계의 결과를 SW(스위치함수)에 입력한결과 : <mark style='background-color: skyblue '>" + SWbit + "</mark>" +
+     "<br> 10단계) 9단계의 결과를 가지고 2단계~8단계를 한번더 반복한다. ( <span style=color:red>* 키를 바꿔서 사용(K1을 K2로교체)</span> )" +
+     "<br><h2>(2라운드 시작)</h2> 11단계)9단계의 결과를 (4비트씩 나눔) : L=><mark style='background-color: skyblue '>" + r_L + "</mark>  R=><mark style='background-color: skyblue '>"+ r_R + "</mark>" +
+     "<br> 12단계) E/P(R)  : <mark style='background-color: skyblue '>" + EP2 + "</mark>" +
+     "<br> 13단계) Key2 와 xor : <mark style='background-color: skyblue '>" + xor2 + "</mark>" +
+     "<br> 14단계) S-box결과 : <mark style='background-color: skyblue '>" + SGbit2 + "</mark>" +
+     "<br> 15단계) P-box(p4)결과 : <mark style='background-color: skyblue '>" + P4GO2 + "</mark>" +
+     "<br> 16단계) L 과 XOR : <mark style='background-color: skyblue '>" + L_xor2 + "</mark>" +
+     "<br> 17단계) R 이어붙임 : <mark style='background-color: skyblue '>" + PP2 + "</mark>" +
+     "<br> 18단계) IP-1 결과 : <mark style='background-color: skyblue '>" + cip + "</mark>" +
+     "<br> 19단계) 10진수로 변환 : <mark style='background-color: skyblue '>" + twocipint + "</mark>" +
+     "<br> 20단계) 10진수를 아스키 문자로변환 : <span style='font-size:30'><mark style='background-color: skyblue '>" + cipStr + "</mark></span>" +
+     "<br> <h2> 결과 : 평문 <mark style='background-color: skyblue '>" + st[st.length-1] + "</mark> 를 암호문 <mark style='background-color: skyblue '>"+ cipStr + "</mark> 로 암호화 완료</h2><hr>" +
+     "<span style=font-size:17><strong><span style=font-size:30px>복호화</span>는 암호문을 가지고 암호화 절차를 똑같이 따라가면됨.( <span style=color:red>* 다만 key의 사용순서를 역순으로 바꾼다. 처음에 K2사용 2라운드에 K1사용 </span>)<strong></span><br><br><br>";
+
+  // }
+    console.log(String.fromCharCode(160));
+};
+//======================================================================이제복호화...
+console.log("----------------------여기부터 복호화 -----------------------------------------------------------------------------------------------------------")
+
+function decode(){
+
+  document.getElementById("result_st").innerHTML = "";
+
+  var key_10jin_de = key_10jin;
+  var p10_box = [3,5,2,7,4,10,1,9,8,6];
+  var p8_box  = [6,3,7,4,8,5,10,9];
+  var key_10bit = new Array(); //= [1,0,1,1,1,0,1,1,0,1];
+  var p10_gokey; //10비트 무작위로바꾼배열
+  var LS_1_shift; //10비트 섞은거 레프트시프트한거
+  var key1;   //10비트 8비트로 줄인 키1 완성
+  var key2;  //레프트시프트 2번한 키2 완성
+
+  var key_10jin_de2 = parseInt(key_10jin_de);
+   key_10jin_de2 = key_10jin_de2.toString(2);
+   key_10jin_de2 = prependZero(key_10jin_de2,10);
+
+   document.getElementById("user_key_value").innerHTML = key_10jin + " , <span style=font-size:16>2진수 : </span>" + key_10jin_de2;
+
+
+   //함수 모음------------------------
+   //키10개 바꾸는메소드
+    function p10(key10){
+       var p10_gokey = new Array();
+       p10_gokey[0] = key10[2];
+       p10_gokey[1] = key10[4];
+       p10_gokey[2] = key10[1];
+       p10_gokey[3] = key10[6];
+       p10_gokey[4] = key10[3];
+       p10_gokey[5] = key10[9];
+       p10_gokey[6] = key10[0];
+       p10_gokey[7] = key10[8];
+       p10_gokey[8] = key10[7];
+       p10_gokey[9] = key10[5];
+       return p10_gokey;
+    }
+    //레프트쉬프트
+    function LS_1(p10_gokey){
+      var LS_1_shift = new Array();
+      LS_1_shift[0] = p10_gokey[1];
+      LS_1_shift[1] = p10_gokey[2];
+      LS_1_shift[2] = p10_gokey[3];
+      LS_1_shift[3] = p10_gokey[4];
+      LS_1_shift[4] = p10_gokey[0];
+
+      LS_1_shift[5] = p10_gokey[6];
+      LS_1_shift[6] = p10_gokey[7];
+      LS_1_shift[7] = p10_gokey[8];
+      LS_1_shift[8] = p10_gokey[9];
+      LS_1_shift[9] = p10_gokey[5];
+      return LS_1_shift;
+    }
+    //p8
+    function p8(LS_1_shift){
+      var p8_gokey = new Array();
+
+       p8_gokey[0]= LS_1_shift[5];
+       p8_gokey[1]= LS_1_shift[2];
+       p8_gokey[2]= LS_1_shift[6];
+       p8_gokey[3]= LS_1_shift[3];
+       p8_gokey[4]= LS_1_shift[7];
+       p8_gokey[5]= LS_1_shift[4];
+       p8_gokey[6]= LS_1_shift[9];
+       p8_gokey[7]= LS_1_shift[8];
+        return p8_gokey;
+    }
+
+   //--------------------------------
+
+    p10_gokey = p10(key_10jin_de2);
+    console.log(p10_gokey);
+
+    LS_1_shift = LS_1(p10_gokey);
+    console.log(LS_1_shift);
+
+    key1 = p8(LS_1_shift); //키1완성
+    console.log(key1);
+
+    var LS_1_a = LS_1(LS_1_shift); //1번
+    var LS_2 = LS_1(LS_1_a); //레프트시프트2번
+    console.log(LS_2);
+
+    key2 = p8(LS_2);  //키2 완성
+    console.log(key2);
+   //키만들기 끝!
+
+   //-------------------------------------------===============암호화?
+
+   // var st = prompt("영문자입력해"); //평문받는 변수
+    var st = document.getElementById('cip').innerHTML;
+    document.getElementById("input_cip").innerHTML = st;
+    st = document.getElementById("incip").value;
+   // document.writeln("입력문자 : " + st);
+   // document.writeln("</br>암호화된문장 : ");
+   st = st.split(""); //받은걸 각요소를 배열에 담는다
+   console.log(st);
+   console.log(st.length);
+   console.log(st[0]);
+
+
+   for(var i1   = 0; i1<st.length; i1++){
+
+         var  st_a  =  st[i1];
+
+   var Ask10 = st_a.charCodeAt(); //받은걸 아스키코드 10진수로변환한거
+   var Ask2 = Ask10.toString(2); //아스키코드 10진수를 2진수로 변환
+   var Ask2to8 = prependZero(Ask2,8); //10진수를 2진수로변환한것을 8비트로 늘린것
+   var Ask2to8 = Ask2to8.split(""); //8비트2진수를 각각 배열에 문자열 요소로 담음
+   var readyStand = new Array();
+   //배열에 문자를 숫자로 바꾸는 메소드
+   for(var i = 0 ; i < 8; i++){
+     readyStand[i] =parseInt(Ask2to8[i]);
+   }
+   console.log("입력받은 문자를 8비트로 변환한것!준비완료 ↓")
+   console.log(readyStand);
+
+   var Stand = readyStand; //평문 = 8비트라 치고
+   var Sbox1 = [[1,0,3,2],
+                [3,2,1,0],
+                [0,2,1,3],
+                [3,1,3,2]]
+
+   var Sbox2 = [[0,1,2,3],
+                [2,0,1,3],
+                [3,0,1,0],
+                [2,1,0,3]]
+
+   var L = new Array();
+   var R = new Array();
+   var EP; //EP실행해서 8비트 확장한것
+   var xor; //key1 과 xor 시킨것
+   var xor2; //key2와 xor 시킨것
+   var SGbit; //s박스를 통하여 4비트를 생성한것!
+   var P4GO; //P4박스를 실행한비트
+   var L_xor; //P4GO와 l을 xor한 결과
+   var PP; //위에랑 R이랑 이어붙인거 스위치전!
+   var SWbit//스위치 시킨결과8비트
+
+
+   //함수모음
+
+   //ip박스
+    function IP(Stand){
+      var ip_go = new Array();
+      ip_go[0] = Stand[1];
+      ip_go[1] = Stand[5];
+      ip_go[2] = Stand[2];
+      ip_go[3] = Stand[0];
+
+      ip_go[4] = Stand[3];
+      ip_go[5] = Stand[7];
+      ip_go[6] = Stand[4];
+      ip_go[7] = Stand[6];
+      //L,R 치환한평문 4비트씩나누는거
+     for(var i = 0 ; i< ip_go.length/2 ; i++){
+       L[i] = ip_go[i];
+     }
+     for(var i = 0 ; i< ip_go.length/2 ; i++){
+       R[i] = ip_go[i+4];
+     }
+   }
+   // E/P박스
+   function E_P(R){
+     var EPR = new Array();
+     EPR[0] = R[3];
+     EPR[1] = R[0];
+     EPR[2] = R[1];
+     EPR[3] = R[2];
+
+     EPR[4] = R[1];
+     EPR[5] = R[2];
+     EPR[6] = R[3];
+     EPR[7] = R[0];
+      return EPR;
+   }
+   //KEY2를 xor 연산 메소드 복호화니깐
+     function XOR(){
+       var xor = new Array();
+       for(var i =0; i<8; i++){
+         if(EP[i] == key2[i]){
+           xor[i] = 0;
+         }else {
+           xor[i] = 1;
+         }
+       }
+       return xor;
+     }
+     //S박스처리위해 필요한 메소드들
+       function L_rowgo(xor){     //xor연산한 결과값을 입력하는데 다시한번 좌우4비트씩나눈다
+                 if((xor[0] == 0) && (xor[3] == 0)){   //4비트씩나눴을떄 좌쪽 첫번쩨 네번쩨 비트값 행번호
+                   return 0;                           //두번째세번쨰 비트값이 열번호이다. 그걸위한 메소드임
+                 }else if((xor[0] == 0) && (xor[3] == 1)){
+                   return 1;
+                 }else if((xor[0] == 1) && (xor[3] == 0)){
+                   return 2;
+                 }else if((xor[0] == 1) && (xor[3] == 1)){
+                   return 3;
+                 }
+               }
+       function L_colgo(xor){
+                 if((xor[1] == 0) && (xor[2] == 0)){
+                   return 0;
+                 }else if((xor[1] == 0) && (xor[2] == 1)){
+                   return 1;
+                 }else if((xor[1] == 1) && (xor[2] == 0)){
+                   return 2;
+                 }else if((xor[1] == 1) && (xor[2] == 1)){
+                   return 3;
+                 }
+               }
+
+       function R_rowgo(xor){
+                 if((xor[4] == 0) && (xor[7] == 0)){
+                   return 0;
+                 }else if((xor[4] == 0) && (xor[7] == 1)){
+                   return 1;
+                 }else if((xor[4] == 1) && (xor[7] == 0)){
+                   return 2;
+                 }else if((xor[4] == 1) && (xor[7] == 1)){
+                   return 3;
+                 }
+               }
+       function R_colgo(xor){
+                 if((xor[5] == 0) && (xor[6] == 0)){
+                   return 0;
+                 }else if((xor[5] == 0) && (xor[6] == 1)){
+                   return 1;
+                 }else if((xor[5] == 1) && (xor[6] == 0)){
+                   return 2;
+                 }else if((xor[5] == 1) && (xor[6] == 1)){
+                   return 3;
+                 }
+               }
+       //s박스에서 찾아낸 결과값을 2진수비트로변환한것을 저장하기 위한 작업 메소드
+       function remake2(SGbit){
+         if(Sbox1[L_row][L_col] == 0){
+             SGbit[0] = 0;
+             SGbit[1] = 0;
+         }else if(Sbox1[L_row][L_col] == 1){
+             SGbit[0] = 0;
+             SGbit[1] = 1;
+         }else if(Sbox1[L_row][L_col] == 2){
+             SGbit[0] = 1;
+             SGbit[1] = 0;
+         }else if(Sbox1[L_row][L_col] == 3){
+             SGbit[0] = 1;
+             SGbit[1] = 1;
+         }
+
+         if(Sbox2[R_row][R_col] == 0){
+             SGbit[2] = 0;
+             SGbit[3] = 0;
+         }else if(Sbox2[R_row][R_col] == 1){
+             SGbit[2] = 0;
+             SGbit[3] = 1;
+         }else if(Sbox2[R_row][R_col] == 2){
+             SGbit[2] = 1;
+             SGbit[3] = 0;
+         }else if(Sbox2[R_row][R_col] == 3){
+             SGbit[2] = 1;
+             SGbit[3] = 1;
+         }
+       }
+     //p4박스
+      function P4(SGbit){
+        var P4GO = new Array();
+        P4GO[0] = SGbit[1];
+        P4GO[1] = SGbit[3];
+        P4GO[2] = SGbit[2];
+        P4GO[3] = SGbit[0];
+         return P4GO;
+       }
+     //P4결과와 L과 xor 연산 메소드
+       function L_XOR(){
+         var L_xor = new Array();
+         for(var i =0; i<4; i++){
+           if(P4GO[i] == L[i]){
+             L_xor[i] = 0;
+           }else {
+             L_xor[i] = 1;
+           }
+         }
+         return L_xor;
+       }
+     //스위치 박스!
+       function SW(PP){
+         var SWbit = new Array();
+
+         SWbit[0] = PP[4];
+         SWbit[1] = PP[5];
+         SWbit[2] = PP[6];
+         SWbit[3] = PP[7];
+
+         SWbit[4] = PP[0];
+         SWbit[5] = PP[1];
+         SWbit[6] = PP[2];
+         SWbit[7] = PP[3];
+
+         return SWbit;
+       }
+
+   //----------------------------------------------------------------------------------
+
+    IP(Stand);
+
+    console.log(L);
+    console.log(R);
+    //L,R 만들어냄 뭐야
+
+     EP = E_P(R);
+     console.log(EP);
+
+     xor = XOR();
+     console.log(xor);
+
+     var L_row = L_rowgo(xor); //행맞추고
+     var L_col = L_colgo(xor); //열마추고
+     console.log(L_row);
+     console.log(L_col);
+
+     var R_row = R_rowgo(xor); //행맞추고
+     var R_col = R_colgo(xor); //열마추고
+     console.log(R_row);
+     console.log(R_col);
+
+     console.log(Sbox1[L_row][L_col]); //결과값
+     console.log(Sbox2[R_row][R_col]); //결과값
+
+     SGbit = new Array();
+
+     remake2(SGbit); //2진수변환!
+
+     console.log(SGbit); //s박스를 통하여 4비트를 생성한것!
+
+     P4GO = P4(SGbit);
+     console.log(P4GO); //P4박스까지실행함!
+
+
+     L_xor = L_XOR();
+     console.log(L_xor); //l과 p4박스실행한거 xor한거
+
+     PP = new Array(); //R이어붙인거 스위치넣기전!
+
+      for(var i = 0; i < L_xor.length; i++){
+        PP[i] = L_xor[i];
+      }
+      for(var i = 4; i < R.length + 4 ; i++){
+        PP[i] = R[i-4];
+      }
+
+      console.log(PP);
+      //R이어붙임! 여기까지 스위치전!
+
+     SWbit = SW(PP);
+     console.log(SWbit); //스위치시킨결과
+
+   //============================================================
+   //2차전
+
+    var r_L = new Array();
+    var r_R = new Array();
+    var SGbit2;
+    var cip; //암호문!!!
+
+    for(var i = 0; i<4; i++){
+      r_L[i] = SWbit[i];
+    }
+    for(var i = 4; i<8; i++){
+      r_R[i-4] = SWbit[i];
+    }                          //다시 L,R 로나누는작업
+    console.log(r_L);
+    console.log(r_R);
+
+    EP = E_P(r_R);
+    console.log(EP);           //ep작업
+
+    //KEY1를 xor 연산 메소드 복호화니깐
+      function XOR2(){
+        var xor = new Array();
+        for(var i =0; i<8; i++){
+          if(EP[i] == key1[i]){
+            xor[i] = 0;
+          }else {
+            xor[i] = 1;
+          }
+        }
+        return xor;
+      }
+
+      var xor2 = XOR2();
+      console.log(xor2); //key2랑 xor시키것
+
+      var L_row = L_rowgo(xor2); //행맞추고
+      var L_col = L_colgo(xor2); //열마추고
+      console.log(L_row);
+      console.log(L_col);
+
+      var R_row = R_rowgo(xor2); //행맞추고
+      var R_col = R_colgo(xor2); //열마추고
+      console.log(R_row);
+      console.log(R_col);
+
+      console.log(Sbox1[L_row][L_col]); //결과값
+      console.log(Sbox2[R_row][R_col]); //결과값
+
+      SGbit2 = new Array();
+
+      remake2(SGbit2); //2진수변환!
+
+      console.log(SGbit2);  //s박스를 통하여 4비트를 생성한것!
+
+      var P4GO2 = P4(SGbit2);
+      console.log(P4GO2);   //P4박스까지실행함!
+
+      //P4결과와 L과 xor 연산 메소드
+        function r_L_XOR(){
+          var L_xor = new Array();
+          for(var i =0; i<4; i++){
+            if(P4GO2[i] == r_L[i]){
+              L_xor[i] = 0;
+            }else {
+              L_xor[i] = 1;
+            }
+          }
+          return L_xor;
+        }
+
+      var L_xor2 = r_L_XOR();
+      console.log(L_xor2);   //l과 p4박스실행한거 xor한거
+
+      var PP2 = new Array();
+
+      for(var i = 0; i < L_xor.length; i++){
+        PP2[i] = L_xor2[i];
+      }
+      for(var i = 4; i < R.length + 4 ; i++){
+        PP2[i] = r_R[i-4];
+      }
+     console.log(PP2);
+
+   //마지막으로 ip-1박스에 넣음!
+     function ip_1(PP){
+       var ip_1 = new Array();
+       ip_1[0] = PP[3];
+       ip_1[1] = PP[0];
+       ip_1[2] = PP[2];
+       ip_1[3] = PP[4];
+       ip_1[4] = PP[6];
+       ip_1[5] = PP[1];
+       ip_1[6] = PP[7];
+       ip_1[7] = PP[5];
+
+       return ip_1;
+     }
+
+
+  cip = ip_1(PP2);
+  console.log("암호문은 ↓");
+  console.log(cip);
+  var twocip = cip.join('');
+  console.log(twocip);
+  var twocipint = parseInt(twocip, 2); //10진수로 반환
+  console.log(twocipint);
+  var cipStr_c =  String.fromCharCode(twocipint); //10진수로 변환 된것을 문자로변환!!
+  console.log(cipStr_c);
+    document.getElementById("result_st").innerHTML = document.getElementById("result_st").innerHTML + cipStr_c;
+  };
+
+};
+
+
+
+  </script>
+<center>
+  <input type="button" name="암호화 버튼" value="암호화 버튼" onclick="check()">
+</center>
+<hr>
+<p>암호문 입력 <input type="text" name="" value="" id="incip"></p>
+입력한 암호문 : <my id = "input_cip" style="font-size:20px"></my><br>
+복호화된 평문 : <my id = "result_st"  style="font-size:20px"></my>
+
+<center>
+    <p id = "decotag"></p>
+</center>
+<hr><hr><hr>
+
+<p><h2>키생성과정</h2></p>
+<p id="key_process"></p>
+<hr>
+
+<p><span style="font-size:27px">암호화과정</span> ( <mark>평문한글자(마지막 글자)</mark>를 <mark>암호문한글자</mark>로 바꾸는 과정 <mark>ex) 평문이 3자면 이과정을 3번반복해서 3자의 암호문을 만들어냄</mark> )</p>
+ <span style="color:tomato"><strong>* 자바스크립트에서의 아스키 코드는 <a href="http://www.htmlhelp.com/reference/charset/" target='_blank'>ISO Latin-1 Character Set</a> 을 사용합니다.</strong></span>
+<p id = "process"></p>
+</body>
+</html>
